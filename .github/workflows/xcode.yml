@@ -11,24 +11,41 @@ jobs:
       fail-fast: false
       matrix:
         macos-version: [13, 14]
-        xcode-version: ['15.2', '15.1', '15.0.1']
-        ld_classic: [true, false]
+        xcode-version: ['15.4', '15.3', '15.2', '15.1', '15.0.1', '14.3.1', '14.2', '14.1']
+        include:
+          - macos-version: 15
+            xcode-version: '16'
+          - macos-version: 14
+            xcode-version: '16'
+          - macos-version: 12
+            xcode-version: '14.2'
+          - macos-version: 12
+            xcode-version: '14.1'
+          - macos-version: 12
+            xcode-version: '14.0.1'
+          - macos-version: 12
+            xcode-version: '13.4.1'
+          - macos-version: 12
+            xcode-version: '13.3.1'
+          - macos-version: 12
+            xcode-version: '13.2.1'
+          - macos-version: 12
+            xcode-version: '13.1'
+        exclude:
+          - macos-version: 14
+            xcode-version: '14.2'
+          - macos-version: 14
+            xcode-version: '14.1'
+          - macos-version: 13
+            xcode-version: '15.4'
+          - macos-version: 13
+            xcode-version: '15.3'
 
     steps:
       - name: Switch Xcode version
         env:
           XCODE_VERSION: ${{ matrix.xcode-version }}
         run: sudo xcode-select --switch "/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
-
-      - name: Show compiler information
-        run: |
-          cc --version
-          echo
-          gcc --version
-          echo
-          clang --version
-          echo
-          ld -version_details
 
       - name: Build LuaJIT
         env:
@@ -46,6 +63,20 @@ jobs:
           make -C lpeg-1.1.0 LUADIR="$PWD/LuaJIT/src" macosx -j
 
       - name: Test LPeg
+        id: lpeg
         run: |
           cd lpeg-1.1.0
           ../LuaJIT/src/luajit test.lua
+
+      - name: Show version information
+        if: always()
+        env:
+          MACOS_VERSION: ${{ matrix.macos-version }}
+          XCODE_VERSION: ${{ matrix.xcode-version }}
+          RESULT: ${{ steps.lpeg.conclusion }}
+        run: |
+          printf '## Toolchain version on macOS %s with Xcode %s\n' "${MACOS_VERSION}" "${XCODE_VERSION}" | tee -a "${GITHUB_STEP_SUMMARY}"
+          printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
+          echo | clang -dM -E - | grep __apple_build_version__ | tee -a "${GITHUB_STEP_SUMMARY}"
+          printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
+          printf 'Result: %s\n' | tee -a "${GITHUB_STEP_SUMMARY}"
