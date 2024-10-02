@@ -86,6 +86,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
+          name: result-${{ matrix.macos-version }}-${{ matrix.xcode-version }}
           path: '*.txt'
 
   compile-results:
