@@ -28,7 +28,7 @@ jobs:
           git clone https://github.com/LuaJIT/LuaJIT.git
           git -C LuaJIT checkout "${LUAJIT_REVISION}"
           export MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | cut -f1 -d. | tr -d '\n')"
-          make -C LuaJIT -j
+          make -C LuaJIT Q= E=@: -j
           ./LuaJIT/src/luajit -v
 
       - name: Build LPeg
