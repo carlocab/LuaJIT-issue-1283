@@ -32,7 +32,7 @@ jobs:
 
       - name: Build LuaJIT
         env:
-          LDFLAGS: ${{ ld_classic && '-Wl,-ld_classic' || '' }}
+          LDFLAGS: ${{ matrix.ld_classic && '-Wl,-ld_classic' || '' }}
         run: |
           git clone https://github.com/LuaJIT/LuaJIT.git
           git -C LuaJIT checkout 2240d84464cc3dcb22fd976f1db162b36b5b52d5
