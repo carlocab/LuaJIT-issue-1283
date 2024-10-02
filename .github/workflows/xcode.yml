@@ -1,5 +1,8 @@
 name: Test Xcode versions
-on: push
+on:
+  push:
+    paths:
+      - .github/workflows/xcode.yml
 
 jobs:
   test:
@@ -8,8 +11,12 @@ jobs:
       fail-fast: false
       matrix:
         macos-version: [13, 14]
-        luajit-revision: ['2240d84464cc3dcb22fd976f1db162b36b5b52d5', 'f5fd22203eadf57ccbaa4a298010d23974b22fc0']
-        xcode-version: ['15.2', '14.3.1']
+        xcode-version: ['15.2', '15.1', '15.0.1', '14.3.1']
+        include:
+          - macos-version: 14
+            xcode-version: '15.3'
+          - macos-version: 14
+            xcode-version: '15.4'
 
     steps:
       - name: Switch Xcode version
@@ -28,11 +35,8 @@ jobs:
           ld -version_details
 
       - name: Build LuaJIT
-        env:
-          LUAJIT_REVISION: ${{ matrix.luajit-revision }}
         run: |
           git clone https://github.com/LuaJIT/LuaJIT.git
-          git -C LuaJIT checkout "${LUAJIT_REVISION}"
           export MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | cut -f1 -d. | tr -d '\n')"
           make -C LuaJIT Q= E=@: -j
           ./LuaJIT/src/luajit -v
