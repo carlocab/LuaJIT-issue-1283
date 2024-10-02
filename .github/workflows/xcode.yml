@@ -48,13 +48,30 @@ jobs:
 
       - name: Build LuaJIT
         env:
-          LDFLAGS: ${{ matrix.ld_classic && '-Wl,-ld_classic' || '' }}
+          LUAJIT_REVISION: 2240d84464cc3dcb22fd976f1db162b36b5b52d5
         run: |
           git clone https://github.com/LuaJIT/LuaJIT.git
-          git -C LuaJIT checkout 2240d84464cc3dcb22fd976f1db162b36b5b52d5
+          pushd LuaJIT
+          git checkout "${LUAJIT_REVISION}"
+          cat <<'PATCH' | patch -p1
+          --- a/src/host/buildvm_asm.c
+          +++ b/src/host/buildvm_asm.c
+          @@ -339,6 +339,10 @@ void emit_asm(BuildCtx *ctx)
+               fprintf(ctx->fp, "\t.ident \"%s\"\n", ctx->dasm_ident);
+               break;
+             case BUILD_machasm:
+          +#if defined(__apple_build_version__) && __apple_build_version__ >= 15000000 && __apple_build_version__ < 15000300
+          +    /* Workaround for XCode 15.0 - 15.2. */
+          +    fprintf(ctx->fp, "\t.subsections_via_symbols\n");
+          +#endif
+               fprintf(ctx->fp,
+                 "\t.cstring\n"
+                 "\t.ascii \"%s\\0\"\n", ctx->dasm_ident);
+          PATCH
           export MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | cut -f1 -d. | tr -d '\n')"
-          make -C LuaJIT Q= E=@: -j
-          ./LuaJIT/src/luajit -v
+          make -j
+          ./src/luajit -v
+          popd
 
       - name: Build LPeg
         run: |
@@ -79,40 +96,3 @@ jobs:
           echo | clang -dM -E - | grep __apple_build_version__ | tee -a "${GITHUB_STEP_SUMMARY}"
           printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
           printf 'Result: %s\n' "${RESULT}" | tee -a "${GITHUB_STEP_SUMMARY}"
-
-          echo | clang -dM -E - | grep __apple_build_version__ >"${RESULT}-${MACOS_VERSION}-${XCODE_VERSION}.txt"
-
-      - name: Upload result
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.lpeg.conclusion }}-${{ matrix.macos-version }}-${{ matrix.xcode-version }}.txt
-          path: ${{ steps.lpeg.conclusion }}-${{ matrix.macos-version }}-${{ matrix.xcode-version }}.txt
-
-  compile-results:
-    runs-on: ubuntu-latest
-    needs: xcode
-    if: always()
-    steps:
-      - name: Download results
-        uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
-
-      - run: ls -la
-
-      - run: ls -Rla
-
-      - name: Combine results
-        run: |
-          printf '## Failures\n' | tee -a "${GITHUB_STEP_SUMMARY}"
-          printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
-          cat failure-*.txt | sort | tee -a "${GITHUB_STEP_SUMMARY}"
-          printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
-
-          printf '## Successes\n' | tee -a "${GITHUB_STEP_SUMMARY}"
-          printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
-          cat success-*.txt | sort | tee -a "${GITHUB_STEP_SUMMARY}"
-          printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
-
-
