@@ -86,8 +86,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: result-${{ matrix.macos-version }}-${{ matrix.xcode-version }}
-          path: '*.txt'
+          name: ${{ steps.lpeg.conclusion }}-${{ matrix.macos-version }}-${{ matrix.xcode-version }}.txt
+          path: ${{ steps.lpeg.conclusion }}-${{ matrix.macos-version }}-${{ matrix.xcode-version }}.txt
 
   compile-results:
     runs-on: ubuntu-latest
@@ -99,8 +99,12 @@ jobs:
         with:
           merge-multiple: true
 
+      - run: ls -la
+
+      - run: ls -Rla
+
       - name: Combine results
-        run:
+        run: |
           printf '## Failures\n' | tee -a "${GITHUB_STEP_SUMMARY}"
           printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
           cat failure-*.txt | sort | tee -a "${GITHUB_STEP_SUMMARY}"
