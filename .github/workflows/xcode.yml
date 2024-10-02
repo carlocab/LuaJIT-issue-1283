@@ -1,0 +1,48 @@
+name: Test Xcode versions
+on: push
+
+jobs:
+  test:
+    runs-on: macos-${{ matrix.macos-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        macos-version: [13, 14]
+        luajit-revision: ['2240d84464cc3dcb22fd976f1db162b36b5b52d5', 'f5fd22203eadf57ccbaa4a298010d23974b22fc0']
+        xcode-version: ['15.2', '14.3.1']
+
+    steps:
+      - name: Switch Xcode version
+        env:
+          XCODE_VERSION: ${{ matrix.xcode-version }}
+        run: sudo xcode-select --switch "/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+
+      - name: Show compiler information
+        run: |
+          cc --version
+          echo
+          gcc --version
+          echo
+          clang --version
+          echo
+          ld -version_details
+
+      - name: Build LuaJIT
+        env:
+          LUAJIT_REVISION: ${{ matrix.luajit-revision }}
+        run: |
+          git clone https://github.com/LuaJIT/LuaJIT.git
+          git -C LuaJIT checkout "${LUAJIT_REVISION}"
+          export MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | cut -f1 -d. | tr -d '\n')"
+          make -C LuaJIT Q= E=@: -j
+          ./LuaJIT/src/luajit -v
+
+      - name: Build LPeg
+        run: |
+          curl -kL "http://www.inf.puc-rio.br/~roberto/lpeg/lpeg-1.1.0.tar.gz" | tar x
+          make -C lpeg-1.1.0 LUADIR="$PWD/LuaJIT/src" macosx -j
+
+      - name: Test LPeg
+        run: |
+          cd lpeg-1.1.0
+          ../LuaJIT/src/luajit test.lua
