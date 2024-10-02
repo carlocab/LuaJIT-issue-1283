@@ -9,6 +9,11 @@ jobs:
       matrix:
         macos-version: [12, 13, 14, 15]
         luajit-revision: ['2240d84464cc3dcb22fd976f1db162b36b5b52d5', 'f5fd22203eadf57ccbaa4a298010d23974b22fc0']
+        include:
+          - macos-version: 13
+            ldflags:
+          - macos-version: 13
+            ldflags: -Wl,-ld_classic
 
     steps:
       - name: Show compiler information
@@ -24,6 +29,7 @@ jobs:
       - name: Build LuaJIT
         env:
           LUAJIT_REVISION: ${{ matrix.luajit-revision }}
+          LDFLAGS: ${{ matrix.ldflags }}
         run: |
           git clone https://github.com/LuaJIT/LuaJIT.git
           git -C LuaJIT checkout "${LUAJIT_REVISION}"
