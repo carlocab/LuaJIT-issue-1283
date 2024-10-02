@@ -5,7 +5,7 @@ on:
       - .github/workflows/xcode.yml
 
 jobs:
-  test:
+  xcode:
     runs-on: macos-${{ matrix.macos-version }}
     strategy:
       fail-fast: false
@@ -40,7 +40,6 @@ jobs:
             xcode-version: '15.4'
           - macos-version: 13
             xcode-version: '15.3'
-
     steps:
       - name: Switch Xcode version
         env:
@@ -80,3 +79,34 @@ jobs:
           echo | clang -dM -E - | grep __apple_build_version__ | tee -a "${GITHUB_STEP_SUMMARY}"
           printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
           printf 'Result: %s\n' "${RESULT}" | tee -a "${GITHUB_STEP_SUMMARY}"
+
+          echo | clang -dM -E - | grep __apple_build_version__ >"${RESULT}-${MACOS_VERSION}-${XCODE_VERSION}.txt"
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          path: '*.txt'
+
+  compile-results:
+    runs-on: ubuntu-latest
+    needs: xcode
+    steps:
+      - name: Download results
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Combine results
+        run:
+          printf '## Failures\n' | tee -a "${GITHUB_STEP_SUMMARY}"
+          printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
+          cat failure-*.txt | sort | tee -a "${GITHUB_STEP_SUMMARY}"
+          printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
+
+          printf '## Successes\n' | tee -a "${GITHUB_STEP_SUMMARY}"
+          printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
+          cat success-*.txt | sort | tee -a "${GITHUB_STEP_SUMMARY}"
+          printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
+
+
