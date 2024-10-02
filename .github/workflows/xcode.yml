@@ -79,4 +79,4 @@ jobs:
           printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
           echo | clang -dM -E - | grep __apple_build_version__ | tee -a "${GITHUB_STEP_SUMMARY}"
           printf '```\n' >>"${GITHUB_STEP_SUMMARY}"
-          printf 'Result: %s\n' | tee -a "${GITHUB_STEP_SUMMARY}"
+          printf 'Result: %s\n' "${RESULT}" | tee -a "${GITHUB_STEP_SUMMARY}"
